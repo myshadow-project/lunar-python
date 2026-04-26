@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
-__version__ = '1.4.8'
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version(__name__)
+except PackageNotFoundError:
+    __version__ = '0.0.0'
 
 from .JieQi import JieQi
 from .NineStar import NineStar

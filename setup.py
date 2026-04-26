@@ -1,15 +1,6 @@
 from setuptools import setup, find_packages
-import re
 from pathlib import Path
 
-# Read version from lunar_python/__init__.py
-def get_version():
-    init_file = Path(__file__).parent / 'lunar_python' / '__init__.py'
-    content = init_file.read_text(encoding='utf-8')
-    match = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]", content, re.M)
-    if match:
-        return match.group(1)
-    raise RuntimeError("Unable to find version string.")
 
 # Read long description from README
 def get_long_description():
@@ -20,7 +11,6 @@ def get_long_description():
 
 setup(
     name='lunar_python',
-    version=get_version(),
     packages=find_packages(include=['lunar_python', 'lunar_python.*']),
     url='https://github.com/6tail/lunar-python',
     license='MIT',
