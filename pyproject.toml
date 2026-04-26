@@ -51,3 +51,12 @@ version = {attr = "lunar_python.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["lunar_python*"]
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple/"
+
+[[tool.uv.index]]
+name = "nexus"
+url = "https://nexus.mymirrorai.com/repository/pypi/simple"
+publish-url = "https://nexus.mymirrorai.com/repository/pypi/"

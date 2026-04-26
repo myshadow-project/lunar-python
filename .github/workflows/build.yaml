@@ -1,0 +1,109 @@
+name: Build package
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Build package
+        run: |
+          uv build --index pypi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: package
+          path: dist/
+          retention-days: 30
+
+      - name: Clean uv cache
+        run: uv cache prune --ci
+
+  publish:
+    name: Publish to Nexus
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
+    needs: build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: package
+          path: dist/
+
+      - name: List artifacts
+        run: |
+          find dist/ -type f | sort
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Publish to Nexus
+        env:
+          UV_PUBLISH_USERNAME: ${{ secrets.UV_PUBLISH_USERNAME }}
+          UV_PUBLISH_PASSWORD: ${{ secrets.UV_PUBLISH_PASSWORD }}
+        run: |
+          uv publish --index nexus
+
+      - name: Attach artifacts to current release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          shopt -s nullglob
+          artifacts=(dist/*)
+
+          if [ ${#artifacts[@]} -eq 0 ]; then
+            echo "No artifacts found in dist/, skip attaching release assets."
+            exit 0
+          fi
+
+          if ! gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} does not exist, skip attaching assets."
+            exit 0
+          fi
+
+          gh release upload "${GITHUB_REF_NAME}" "${artifacts[@]}" --clobber
+
+      - name: Clean uv cache
+        run: uv cache prune --ci
